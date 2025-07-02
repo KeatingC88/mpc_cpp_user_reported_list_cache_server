@@ -1,0 +1,34 @@
+# CMake build folders
+/build/
+/out/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+
+# Visual Studio & MSVC
+.vs/
+*.sln
+*.vcxproj*
+*.user
+*.obj
+*.pdb
+*.idb
+*.log
+
+# Compiled Binaries
+*.exe
+*.dll
+*.lib
+*.so
+*.a
+
+# Backup & temporary files
+*~
+*.swp
+*.tmp
+*.bak
+
+# OS-generated
+.DS_Store
+Thumbs.db
