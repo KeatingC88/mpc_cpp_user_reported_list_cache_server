@@ -5,8 +5,8 @@
 
 #pragma warning(pop)
 
-#include <cpp_redis/core/client.hpp>
-#include <iostream>
+#define ASIO_STANDALONE
+#include <asio.hpp>
 
 int main() 
 {

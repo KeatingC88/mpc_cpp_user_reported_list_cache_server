@@ -10,20 +10,6 @@ add_executable(mpc_cpp_online_status_server
 
 # Include directories for headers
 target_include_directories(mpc_cpp_online_status_server PRIVATE
-    ${CMAKE_SOURCE_DIR}/cpp_redis/install/include
-    ${CMAKE_SOURCE_DIR}/tacopie/includes
     ${CMAKE_SOURCE_DIR}/crow/include
     ${CMAKE_SOURCE_DIR}/asio/asio/include
-)
-
-# Link against Redis client and networking
-target_link_directories(mpc_cpp_online_status_server PRIVATE
-    ${CMAKE_SOURCE_DIR}/cpp_redis/install/lib/Release
-    ${CMAKE_SOURCE_DIR}/tacopie/build/lib/Release
-)
-
-target_link_libraries(mpc_cpp_online_status_server
-    cpp_redis
-    tacopie
-    ws2_32  # Required on Windows for sockets
 )
