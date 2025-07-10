@@ -1,15 +1,14 @@
 ﻿#pragma warning(push)
 #pragma warning(disable: 4267 4244 4305) // size_t → int usigned, etc.
-
 #include "crow_all.h"
-
 #pragma warning(pop)
-
 #define ASIO_STANDALONE
 #include <asio.hpp>
 
 int main() 
 {
+
+
 
     crow::SimpleApp app;
 
@@ -18,5 +17,7 @@ int main()
     });
 
     app.bindaddr("127.0.0.1").port(3003).multithreaded().run();
+
+
 
 }
