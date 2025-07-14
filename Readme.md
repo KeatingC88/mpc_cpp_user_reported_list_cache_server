@@ -166,3 +166,7 @@ post
   "id": "encryption-value",
 }
 The server will decrypt user_id and status using AES-256-CBC and store the status in Redis under the user’s ID.
+
+
+You must have a redis server setup already for this to work.
+You must have a .env file ready and setup with the published .exe file for this to work too.
