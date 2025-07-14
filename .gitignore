@@ -32,3 +32,5 @@
 # OS-generated
 .DS_Store
 Thumbs.db
+
+.env
