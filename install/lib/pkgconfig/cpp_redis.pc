@@ -1,9 +1,0 @@
-prefix=C:/Users/AcidSnake/source/repos/MPC/mpc_cpp_online_status_server/install
-libdir=${prefix}/lib
-includedir=${prefix}/include
-
-Name: cpp_redis
-Description: C++11 Lightweight Redis client: async, thread-safe, no dependency, pipelining, multi-platform.
-Version: 
-Libs: -L${libdir} -lcpp_redis
-Cflags: -I${includedir}
