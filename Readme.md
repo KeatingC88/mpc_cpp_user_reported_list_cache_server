@@ -1,9 +1,3 @@
-# Library Dependencies -- Clone with submodules:
-
-git clone --recurse-submodules https://github.com/your_username/mpc_cpp_online_status_server.git
-cd mpc_cpp_online_status_server
-
-
 # Dependencies -- If you wish to download them manually
 Library	Repo URL
 Crow	https://github.com/CrowCpp/crow.git
