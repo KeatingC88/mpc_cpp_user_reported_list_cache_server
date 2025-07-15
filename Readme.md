@@ -1,4 +1,4 @@
-# Dependencies -- If you wish to download them manually
+# Dependencies
 Library	Repo URL
 Crow	https://github.com/CrowCpp/crow.git
 ASIO	https://github.com/chriskohlhoff/asio.git
@@ -94,43 +94,3 @@ docker run -d -p {SERVER_NETWORK_PORT_NUMBER}:{DOCKER_CONTAINER_PORT_NUMBER} --n
 
 # Other Notes
 .Env file must be in the same directory as the .exe if using Cmake.
-
-
-# Directory Layout
-mpc_cpp_online_status_server/
-│
-├── .env                          # Environment variables used by the server and docker-compose
-├── Dockerfile                    # Container image build script
-├── docker-compose.yaml           # Compose file to run the server + Redis
-├── CMakeLists.txt                # CMake build script
-├── README.md                     # Documentation and usage
-│
-├── mpc_cpp_online_status_server.cpp   # Main C++ source file (your current file)
-│
-├── jwt-cpp/                      # JWT handling library (added via submodule)
-│   └── include/
-│
-├── crow/                         # Crow framework (submodule)
-│   └── include/
-│
-├── asio/                         # ASIO library (standalone networking lib)
-│   └── asio/include/
-│
-├── tacopie/                      # TCP client lib required by cpp_redis
-│   └── includes/
-│
-├── cpp_redis/                    # Redis C++ client
-│   ├── includes/
-│   └── sources/
-│
-└── nlohmann/                     # JSON for Modern C++ header-only lib
-    └── include/json.hpp
-
-
-# Directory layout of the Cmake Build
-
-mpc_cpp_online_status_server/
-├── build/
-│   └── Release/
-│       ├── mpc_cpp_online_status_server.exe   # Your compiled C++ server
-│       ├── .env  (don't forget me).
