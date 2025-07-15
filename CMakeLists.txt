@@ -27,6 +27,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/cpp_redis/includes
     ${CMAKE_SOURCE_DIR}/tacopie/includes
     ${CMAKE_SOURCE_DIR}/jwt-cpp/include
+    ${CMAKE_SOURCE_DIR}/nlohmann/include
 )
 
 # Define the executable
