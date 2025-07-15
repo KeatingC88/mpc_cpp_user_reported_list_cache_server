@@ -42,7 +42,11 @@ void Load_Env_File(const std::string& path = ".env") {
 
         if (std::getline(lineStream, key, '=') &&
             std::getline(lineStream, value)) {
-            _putenv_s(key.c_str(), value.c_str());
+            #ifdef _WIN32
+                _putenv_s(key.c_str(), value.c_str());
+            #else
+                setenv(key.c_str(), value.c_str(), 1);
+            #endif
         }
     }
 }
@@ -141,14 +145,17 @@ int main()
         return 1;
     }
 
-    global_key = SHA256(key_env);
-    global_iv = std::vector<unsigned char>(iv_env, iv_env + 16);
+    std::string key_str = key_env;
+    std::string iv_str = iv_env;
+
+    global_key = SHA256(key_str);
+    global_iv = std::vector<unsigned char>(iv_str.begin(), iv_str.end());
 
     client.connect(REDIS_HOST_ADDRESS, std::stoi(REDIS_PORT_ADDRESS), [](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
         if (status == cpp_redis::client::connect_state::dropped) {
             std::cerr << "Client disconnected from " << host << ":" << port << std::endl;
         }
-    });
+        });
 
     CROW_ROUTE(app, "/set").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
         auto body = crow::json::load(req.body);
@@ -170,14 +177,15 @@ int main()
             std::string decrypted_status = AES256_Decryptor(encrypted_user_status);
 
             client.set(decrypted_user, decrypted_status);
-            client.sync_commit();
+            client.commit();
 
             return crow::response(200, decrypted_user + ":" + decrypted_status);
 
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             return crow::response(400, e.what());
         }
-    });
+        });
 
     CROW_ROUTE(app, "/get").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
         auto body = crow::json::load(req.body);
@@ -206,10 +214,11 @@ int main()
             }
 
             return crow::response(200, reply.as_string());
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             return crow::response(500, e.what());
         }
-    });
+        });
 
     app.bindaddr(HOST_IP_ADDRESS).port(std::stoi(HOST_PORT_ADDRESS)).multithreaded().run();
 }

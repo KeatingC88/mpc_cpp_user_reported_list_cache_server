@@ -1,11 +1,10 @@
-#Library Dependencies
-Clone with submodules:
+# Library Dependencies -- Clone with submodules:
 
 git clone --recurse-submodules https://github.com/your_username/mpc_cpp_online_status_server.git
 cd mpc_cpp_online_status_server
 
 
-#Dependencies
+# Dependencies -- If you wish to download them manually
 Library	Repo URL
 Crow	https://github.com/CrowCpp/crow.git
 ASIO	https://github.com/chriskohlhoff/asio.git
@@ -15,7 +14,7 @@ jwt-cpp	https://github.com/Thalhammer/jwt-cpp.git
 nlohmann	https://github.com/nlohmann/json.git
 
 
-#Example .Env File you must create
+# Example .Env File you must create
 HOST_IP_ADDRESS=127.0.0.1
 HOST_PORT_ADDRESS=8000
 REDIS_HOST_ADDRESS=127.0.0.1
@@ -27,7 +26,7 @@ ENCRYPTION_IV=(enter 16 character string here)
 JWT_ISSUER_KEY=(Only use if ur encrpting values)
 JWT_CLIENT_KEY=(you may have to modify the code to remove these)
 
-#Cmakeuplist.txt
+# Cmakeuplist.txt
 cmake_minimum_required(VERSION 3.16)
 project(mpc_cpp_online_status_server)
 
@@ -69,13 +68,13 @@ target_link_libraries(mpc_cpp_online_status_server
 )
 
 
-#Build Instructions
+# Cmake Build Instructions (preferred method)
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . --config Release
 
-#Example POST - SET
+# Example POST - SET
 
 {
   "id": "Base64EncryptedUserId",
@@ -83,9 +82,61 @@ cmake --build . --config Release
   "token": "JWTToken"
 }
 
-#Example POST - GET
+# Example POST - GET
 {
   "id": "Base64EncryptedUserId",
   "token": "JWTToken"
 }
 
+# Docker Option 1) for CLI command:
+1) Navigate CLI to folder and use
+docker compose -f mpc_cpp_online_status_server.yaml up -d
+
+# Docker Option 2) startup for CLI command:
+1) Navigate CLI to folder and use
+docker build -t mpc_cpp_online_status_server_rom .
+docker run -d -p {SERVER_NETWORK_PORT_NUMBER}:{DOCKER_CONTAINER_PORT_NUMBER} --name mpc_cpp_online_status_server mpc_cpp_online_status_server_rom
+
+
+# Other Notes
+.Env file must be in the same directory as the .exe if using Cmake.
+
+
+# Directory Layout
+mpc_cpp_online_status_server/
+│
+├── .env                          # Environment variables used by the server and docker-compose
+├── Dockerfile                    # Container image build script
+├── docker-compose.yaml           # Compose file to run the server + Redis
+├── CMakeLists.txt                # CMake build script
+├── README.md                     # Documentation and usage
+│
+├── mpc_cpp_online_status_server.cpp   # Main C++ source file (your current file)
+│
+├── jwt-cpp/                      # JWT handling library (added via submodule)
+│   └── include/
+│
+├── crow/                         # Crow framework (submodule)
+│   └── include/
+│
+├── asio/                         # ASIO library (standalone networking lib)
+│   └── asio/include/
+│
+├── tacopie/                      # TCP client lib required by cpp_redis
+│   └── includes/
+│
+├── cpp_redis/                    # Redis C++ client
+│   ├── includes/
+│   └── sources/
+│
+└── nlohmann/                     # JSON for Modern C++ header-only lib
+    └── include/json.hpp
+
+
+# Directory layout of the Cmake Build
+
+mpc_cpp_online_status_server/
+├── build/
+│   └── Release/
+│       ├── mpc_cpp_online_status_server.exe   # Your compiled C++ server
+│       ├── .env  (don't forget me).

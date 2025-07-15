@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mpc_cpp_online_status_server:
+    build: .
+    ports:
+      - "${HOST_PORT_ADDRESS:-8080}:8080"
+    environment:
+      HOST_IP_ADDRESS: ${HOST_IP_ADDRESS}
+      HOST_PORT_ADDRESS: ${HOST_PORT_ADDRESS}
+      REDIS_HOST_ADDRESS: ${REDIS_HOST_ADDRESS}
+      REDIS_PORT_ADDRESS: ${REDIS_PORT_ADDRESS}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      ENCRYPTION_IV: ${ENCRYPTION_IV}
+      JWT_ISSUER_KEY: ${JWT_ISSUER_KEY}
+      JWT_CLIENT_KEY: ${JWT_CLIENT_KEY}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    ports:
+       - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
