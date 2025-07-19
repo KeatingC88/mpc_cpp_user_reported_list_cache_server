@@ -8,7 +8,7 @@ jwt-cpp	https://github.com/Thalhammer/jwt-cpp.git
 nlohmann	https://github.com/nlohmann/json.git
 
 
-# Example .Env File you must create
+# Example .Env File you must create and adjust
 HOST_IP_ADDRESS=127.0.0.1
 HOST_PORT_ADDRESS=8000
 REDIS_HOST_ADDRESS=127.0.0.1
@@ -20,9 +20,9 @@ ENCRYPTION_IV=(enter 16 character string here)
 JWT_ISSUER_KEY=(Only use if ur encrpting values)
 JWT_CLIENT_KEY=(you may have to modify the code to remove these)
 
-# Cmakeuplist.txt
+# Cmakeuplist.txt of what's in here
 cmake_minimum_required(VERSION 3.16)
-project(mpc_cpp_online_status_server)
+project(mpc_cpp_user_cache_server)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,9 +52,9 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/nlohmann/include
 )
 
-add_executable(mpc_cpp_online_status_server mpc_cpp_online_status_server.cpp)
+add_executable(mpc_cpp_user_cache_server mpc_cpp_user_cache_server.cpp)
 
-target_link_libraries(mpc_cpp_online_status_server
+target_link_libraries(mpc_cpp_user_cache_server
     PRIVATE 
     OpenSSL::Crypto
     cpp_redis
@@ -68,7 +68,7 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . --config Release
 
-# Example POST - SET
+# Example POST - SET example
 
 {
   "id": "Base64EncryptedUserId",
@@ -76,21 +76,25 @@ cmake --build . --config Release
   "token": "JWTToken"
 }
 
-# Example POST - GET
+# Example POST - GET example by ID
 {
   "id": "Base64EncryptedUserId",
   "token": "JWTToken"
 }
 
+# Example POST - GET_ALL example for all users
+{
+  "token": "JWTToken"
+}
+
 # Docker Option 1) for CLI command:
 1) Navigate CLI to folder and use
-docker compose -f mpc_cpp_online_status_server.yaml up -d
+docker compose -f mpc_cpp_user_cache_server.yaml up -d
 
 # Docker Option 2) startup for CLI command:
 1) Navigate CLI to folder and use
 docker build -t mpc_cpp_online_status_server_rom .
-docker run -d -p {SERVER_NETWORK_PORT_NUMBER}:{DOCKER_CONTAINER_PORT_NUMBER} --name mpc_cpp_online_status_server mpc_cpp_online_status_server_rom
-
+docker run -d -p {SERVER_NETWORK_PORT_NUMBER}:{DOCKER_CONTAINER_PORT_NUMBER} --name mpc_cpp_user_cache_server mpc_cpp_online_status_server_rom
 
 # Other Notes
 .Env file must be in the same directory as the .exe if using Cmake.

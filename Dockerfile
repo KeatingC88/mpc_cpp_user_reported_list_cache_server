@@ -36,4 +36,4 @@ RUN mkdir -p build && cd build && \
 EXPOSE 8080
 
 # Command to run
-CMD ["./build/mpc_cpp_online_status_server"]
+CMD ["./build/mpc_cpp_user_cache_server"]
