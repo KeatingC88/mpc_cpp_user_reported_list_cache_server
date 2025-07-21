@@ -118,14 +118,12 @@ int Authenticate_JWT_Claims(const std::string& JWT) {
                 else if (it.key() == "iss" && AES256_Decryptor(it.value()) != JWT_ISSUER_KEY) {
                     return 0;
                 }
-            }
-            else if (std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) >= it.value()) {
+            } else if (std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) >= it.value()) {
                 return 0;
             }
         }
         return 1;
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         return 0;
     }
 }
@@ -186,10 +184,10 @@ int main()
         auto body = crow::json::load(req.body);
 
         if (!body || 
-            !body.has("id") || 
-            !body.has("token") || 
-            !body.has("online_status") || 
-            !body.has("custom_status") ||
+            !body.has("id") ||
+            !body.has("token") ||
+            !body.has("online_status") ||
+            !body.has("custom_lbl") ||
             !body.has("name") ||
             !body.has("created_on") ||
             !body.has("avatar_url_path") ||
@@ -214,10 +212,12 @@ int main()
             std::string encrypted_user_id = body["id"].s();
             std::string decrypted_user_id = AES256_Decryptor(encrypted_user_id);
 
+            client.ltrim(decrypted_user_id, 1, 0);
+
             client.rpush(decrypted_user_id, { 
                 encrypted_user_id, 
                 body["online_status"].s(),
-                body["custom_status"].s(),
+                body["custom_lbl"].s(),
                 body["name"].s(),
                 body["created_on"].s(),
                 body["avatar_url_path"].s(),
@@ -269,18 +269,40 @@ int main()
                 return crow::response(404, "Error 5");//Reply from the database is incorrect.
             }
 
-            json j_array = json::array();
+            json j_object;
+
+            size_t index = 0;
 
             for (const auto& element : reply.as_array()) {
+                std::string key;
+                switch (index) {
+                    case 0: key = "id"; break;
+                    case 1: key = "online_status"; break;
+                    case 2: key = "custom_lbl"; break;
+                    case 3: key = "name"; break;
+                    case 4: key = "created_on"; break;
+                    case 5: key = "avatar_url_path"; break;
+                    case 6: key = "avatar_title"; break;
+                    case 7: key = "language_code"; break;
+                    case 8: key = "region_code"; break;
+                    case 9: key = "login_on"; break;
+                    case 10: key = "logout_on"; break;
+                    case 11: key = "login_type"; break;
+                    case 12: key = "account_type"; break;
+                    default: key = "unknown_" + std::to_string(index); break;
+                }
+
                 if (element.is_string()) {
-                    j_array.push_back(element.as_string());
+                    j_object[key] = element.as_string();
                 }
                 else {
-                    j_array.push_back(nullptr);// fallback if element isn't a string
+                    j_object[key] = nullptr;
                 }
+
+                ++index;
             }
 
-            return crow::response(200, j_array.dump());
+            return crow::response(200, j_object.dump());
 
         } catch (const std::exception& e) {
 
