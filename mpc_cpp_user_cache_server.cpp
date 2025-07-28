@@ -107,17 +107,25 @@ int Authenticate_JWT_Claims(const std::string& JWT) {
     try {
         const char* JWT_ISSUER_KEY = std::getenv("JWT_ISSUER_KEY");
         const char* JWT_CLIENT_KEY = std::getenv("JWT_CLIENT_KEY");
+        const char* JWT_CLIENT_ADDRESS = std::getenv("JWT_CLIENT_ADDRESS");
+
         auto decoded = jwt::decode(JWT);
         auto payload_json = nlohmann::json::parse(decoded.get_payload());
 
         for (auto it = payload_json.begin(); it != payload_json.end(); ++it) {
             if (it.value().is_string()) {
+
                 if (it.key() == "aud" && AES256_Decryptor(it.value()) != JWT_CLIENT_KEY) {
                     return 0;
                 }
                 else if (it.key() == "iss" && AES256_Decryptor(it.value()) != JWT_ISSUER_KEY) {
                     return 0;
                 }
+
+                if (AES256_Decryptor(it.value()) == JWT_CLIENT_ADDRESS) {
+                    return 1;
+                }
+
             } else if (std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) >= it.value()) {
                 return 0;
             }
@@ -197,7 +205,8 @@ int main()
             !body.has("login_on") ||
             !body.has("logout_on") ||
             !body.has("login_type") ||
-            !body.has("account_type")
+            !body.has("account_type") ||
+            !body.has("email_address")
             ) {
             return crow::response(400, "Error: 1");//Something is missing from the condition.
         }
@@ -227,7 +236,8 @@ int main()
                 body["login_on"].s(),
                 body["logout_on"].s(),
                 body["login_type"].s(),
-                body["account_type"].s()
+                body["account_type"].s(),
+                body["email_address"].s()
             });
 
             client.commit();
@@ -289,6 +299,7 @@ int main()
                     case 10: key = "logout_on"; break;
                     case 11: key = "login_type"; break;
                     case 12: key = "account_type"; break;
+                    case 13: key = "email_address"; break;
                     default: key = "unknown_" + std::to_string(index); break;
                 }
 
