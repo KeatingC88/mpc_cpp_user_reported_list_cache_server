@@ -5,7 +5,16 @@
 /CMakeCache.txt
 /cmake_install.cmake
 /Makefile
-
+/asio/
+/build_external/
+/cpp_redis/
+/crow/
+/env/
+/jwt-cpp/
+/nlohmann/
+/tacopie/
+/x64/
+/app/
 # Visual Studio & MSVC
 .vs/
 *.sln

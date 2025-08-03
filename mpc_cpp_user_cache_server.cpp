@@ -1,15 +1,13 @@
-﻿#include <string>
+﻿
+#include "crow_all.h"
+#include <tacopie/tacopie>
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-
-#include "crow_all.h"
-#include <tacopie/tacopie>
-
 #include "jwt-cpp/jwt.h"
 #include <json.hpp>
 using json = nlohmann::json;
-
+#include <cstdlib>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/bio.h>
@@ -25,6 +23,14 @@ cpp_redis::client client;
 
 std::vector<unsigned char> global_key;
 std::vector<unsigned char> global_iv;
+
+std::string require_env(const char* name) {
+    const char* val = std::getenv(name);
+    if (!val) {
+        throw std::runtime_error(std::string("Missing required env var: ") + name);
+    }
+    return std::string(val);
+}
 
 void Load_Env_File(const std::string& path = ".env") {
     std::ifstream file(path);
@@ -43,14 +49,22 @@ void Load_Env_File(const std::string& path = ".env") {
 
         if (std::getline(lineStream, key, '=') &&
             std::getline(lineStream, value)) {
-            #ifdef _WIN32
-                _putenv_s(key.c_str(), value.c_str());
-            #else
-                setenv(key.c_str(), value.c_str(), 1);
-            #endif
+
+            if (!value.empty() && value.back() == '\r') {
+                value.pop_back();
+            }
+
+#ifdef _WIN32
+            _putenv_s(key.c_str(), value.c_str());
+            std::cout << "Loaded env var: " << key << "=" << require_env(key.c_str()) << std::endl;
+#else
+            setenv(key.c_str(), value.c_str(), 1);
+            std::cout << "Loaded env var: " << key << "=" << require_env(key.c_str()) << std::endl;
+#endif
         }
     }
 }
+
 
 std::vector<unsigned char> Base64_Decoder(const std::string& input) {
     BIO* bio = BIO_new_mem_buf(input.data(), input.length());
@@ -105,9 +119,10 @@ std::string AES256_Decryptor(const std::string& base64_ciphertext) {
 
 int Authenticate_JWT_Claims(const std::string& JWT) {
     try {
-        const char* JWT_ISSUER_KEY = std::getenv("JWT_ISSUER_KEY");
-        const char* JWT_CLIENT_KEY = std::getenv("JWT_CLIENT_KEY");
-        const char* JWT_CLIENT_ADDRESS = std::getenv("JWT_CLIENT_ADDRESS");
+
+        std::string JWT_ISSUER_KEY = require_env("JWT_ISSUER_KEY");
+        std::string JWT_CLIENT_KEY = require_env("JWT_CLIENT_KEY");
+        std::string JWT_CLIENT_ADDRESS = require_env("JWT_CLIENT_ADDRESS");
 
         auto decoded = jwt::decode(JWT);
         auto payload_json = nlohmann::json::parse(decoded.get_payload());
@@ -163,129 +178,139 @@ int main()
 {
     crow::App<CORS> app;
     Load_Env_File();
-    const char* HOST_IP_ADDRESS = std::getenv("HOST_IP_ADDRESS");
-    const char* HOST_PORT_ADDRESS = std::getenv("HOST_PORT_ADDRESS");
-    const char* REDIS_HOST_ADDRESS = std::getenv("REDIS_HOST_ADDRESS");
-    const char* REDIS_PORT_ADDRESS = std::getenv("REDIS_PORT_ADDRESS");
 
-    const char* key_env = std::getenv("ENCRYPTION_KEY");
-    const char* iv_env = std::getenv("ENCRYPTION_IV");
+    try {
 
-    if (!key_env || !iv_env || std::strlen(key_env) != 32 || std::strlen(iv_env) != 16) {
-        std::cerr << "Invalid key or IV in environment variables." << std::endl;
-        return 1;
-    }
+        std::string key = require_env("ENCRYPTION_KEY");
+        std::string iv = require_env("ENCRYPTION_IV");
 
-    std::string key_str = key_env;
-    std::string iv_str = iv_env;
+        std::string SERVER_NETWORK_HOST_IP = require_env("SERVER_NETWORK_HOST_IP");
+        std::string SERVER_NETWORK_SOCKET_PORT = require_env("SERVER_NETWORK_SOCKET_PORT");
 
-    global_key = SHA256(key_str);
-    global_iv = std::vector<unsigned char>(iv_str.begin(), iv_str.end());
+        std::string REDIS_HOST_ADDRESS = require_env("DOCKER_INTERNAL_REDIS_HOST_ADDRESS");
+        std::string REDIS_PORT_ADDRESS = require_env("DOCKER_INTERNAL_REDIS_PORT_ADDRESS");
 
-    client.connect(REDIS_HOST_ADDRESS, std::stoi(REDIS_PORT_ADDRESS), [](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
-        if (status == cpp_redis::client::connect_state::dropped) {
-            std::cerr << "Client disconnected from " << host << ":" << port << std::endl;
-        }
-    });
+        std::string key_env = require_env("ENCRYPTION_KEY");
+        std::string iv_env = require_env("ENCRYPTION_IV");
 
-    CROW_ROUTE(app, "/set/user").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
-        auto body = crow::json::load(req.body);
+        std::string key_str = key_env;
+        std::string iv_str = iv_env;
 
-        if (!body || 
-            !body.has("id") ||
-            !body.has("token") ||
-            !body.has("online_status") ||
-            !body.has("custom_lbl") ||
-            !body.has("name") ||
-            !body.has("created_on") ||
-            !body.has("avatar_url_path") ||
-            !body.has("avatar_title") ||
-            !body.has("language_code") ||
-            !body.has("region_code") ||
-            !body.has("login_on") ||
-            !body.has("logout_on") ||
-            !body.has("login_type") ||
-            !body.has("account_type") ||
-            !body.has("email_address")
-            ) {
-            return crow::response(400, "Error: 1");//Something is missing from the condition.
+        if (key.length() != 32 || iv.length() != 16) {
+            std::cerr << "Invalid key or IV length in environment variables." << std::endl;
+            return 1;
         }
 
-        std::string JWT = body["token"].s();
-        if (!Authenticate_JWT_Claims(JWT)) {
-            return crow::response(400, "Error: 2");//Something is incorrect in the JWToken.
-        }
+        std::cout << "Encryption key and IV loaded successfully.\n";
 
-        try {
+        global_key = SHA256(key_str);
+        global_iv = std::vector<unsigned char>(iv_str.begin(), iv_str.end());
 
-            std::string encrypted_user_id = body["id"].s();
-            std::string decrypted_user_id = AES256_Decryptor(encrypted_user_id);
+        client.connect(REDIS_HOST_ADDRESS, std::stoi(REDIS_PORT_ADDRESS), [](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
+            if (status == cpp_redis::client::connect_state::dropped) {
+                std::cerr << "Client disconnected from " << host << ":" << port << std::endl;
+            }
+        });
 
-            client.ltrim(decrypted_user_id, 1, 0);
+        CROW_ROUTE(app, "/set/user").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
+            auto body = crow::json::load(req.body);
 
-            client.rpush(decrypted_user_id, { 
-                encrypted_user_id, 
-                body["online_status"].s(),
-                body["custom_lbl"].s(),
-                body["name"].s(),
-                body["created_on"].s(),
-                body["avatar_url_path"].s(),
-                body["avatar_title"].s(),
-                body["language_code"].s(),
-                body["region_code"].s(),
-                body["login_on"].s(),
-                body["logout_on"].s(),
-                body["login_type"].s(),
-                body["account_type"].s(),
-                body["email_address"].s()
-            });
-
-            client.commit();
-
-            return crow::response(200, decrypted_user_id);
-
-        } catch (const std::exception& e) {
-
-            return crow::response(400, "Error: 3");//Try catch failed.
-
-        }
-    });
-
-    CROW_ROUTE(app, "/get/user").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
-        auto body = crow::json::load(req.body);
-
-        if (!body || 
-            !body.has("id") || 
-            !body.has("token")
-        ) {
-            return crow::response(400, "Error 3");//Something is missing from the condition.
-        }
-
-        std::string JWT = body["token"].s();
-        if (!Authenticate_JWT_Claims(JWT)) {
-            return crow::response(400, "Error 4");//Something is incorrect in the JWToken.
-        }
-
-        try {
-            std::string encrypted_user_id = body["id"].s();
-            std::string decrypted_user_id = AES256_Decryptor(encrypted_user_id);
-
-            auto get_reply_future = client.lrange(decrypted_user_id, 0, -1);
-            client.commit();
-
-            cpp_redis::reply reply = get_reply_future.get();
-
-            if (reply.is_null() || reply.is_array() == false) {
-                return crow::response(404, "Error 5");//Reply from the database is incorrect.
+            if (!body ||
+                !body.has("id") ||
+                !body.has("token") ||
+                !body.has("online_status") ||
+                !body.has("custom_lbl") ||
+                !body.has("name") ||
+                !body.has("created_on") ||
+                !body.has("avatar_url_path") ||
+                !body.has("avatar_title") ||
+                !body.has("language_code") ||
+                !body.has("region_code") ||
+                !body.has("login_on") ||
+                !body.has("logout_on") ||
+                !body.has("login_type") ||
+                !body.has("account_type") ||
+                !body.has("email_address")
+                ) {
+                return crow::response(400, "Error: 1");//Something is missing from the condition.
             }
 
-            json j_object;
+            std::string JWT = body["token"].s();
+            if (!Authenticate_JWT_Claims(JWT)) {
+                return crow::response(400, "Error: 2");//Something is incorrect in the JWToken.
+            }
 
-            size_t index = 0;
+            try {
 
-            for (const auto& element : reply.as_array()) {
-                std::string key;
-                switch (index) {
+                std::string encrypted_user_id = body["id"].s();
+                std::string decrypted_user_id = AES256_Decryptor(encrypted_user_id);
+
+                client.ltrim(decrypted_user_id, 1, 0);
+
+                client.rpush(decrypted_user_id, {
+                    encrypted_user_id,
+                    body["online_status"].s(),
+                    body["custom_lbl"].s(),
+                    body["name"].s(),
+                    body["created_on"].s(),
+                    body["avatar_url_path"].s(),
+                    body["avatar_title"].s(),
+                    body["language_code"].s(),
+                    body["region_code"].s(),
+                    body["login_on"].s(),
+                    body["logout_on"].s(),
+                    body["login_type"].s(),
+                    body["account_type"].s(),
+                    body["email_address"].s()
+                    });
+
+                client.commit();
+
+                return crow::response(200, decrypted_user_id);
+
+            } catch (const std::exception& e) {
+
+                return crow::response(400, "Error: 3");//Try catch failed.
+
+            }
+        });
+
+        CROW_ROUTE(app, "/get/user").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
+            auto body = crow::json::load(req.body);
+
+            if (!body ||
+                !body.has("id") ||
+                !body.has("token")
+                ) {
+                return crow::response(400, "Error 3");//Something is missing from the condition.
+            }
+
+            std::string JWT = body["token"].s();
+            if (!Authenticate_JWT_Claims(JWT)) {
+                return crow::response(400, "Error 4");//Something is incorrect in the JWToken.
+            }
+
+            try {
+
+                std::string encrypted_user_id = body["id"].s();
+                std::string decrypted_user_id = AES256_Decryptor(encrypted_user_id);
+
+                auto get_reply_future = client.lrange(decrypted_user_id, 0, -1);
+                client.commit();
+
+                cpp_redis::reply reply = get_reply_future.get();
+
+                if (reply.is_null() || reply.is_array() == false) {
+                    return crow::response(404, "Error 5");//Reply from the database is incorrect.
+                }
+
+                json j_object;
+
+                size_t index = 0;
+
+                for (const auto& element : reply.as_array()) {
+                    std::string key;
+                    switch (index) {
                     case 0: key = "id"; break;
                     case 1: key = "online_status"; break;
                     case 2: key = "custom_lbl"; break;
@@ -301,99 +326,104 @@ int main()
                     case 12: key = "account_type"; break;
                     case 13: key = "email_address"; break;
                     default: key = "unknown_" + std::to_string(index); break;
-                }
-
-                if (element.is_string()) {
-                    j_object[key] = element.as_string();
-                }
-                else {
-                    j_object[key] = nullptr;
-                }
-
-                ++index;
-            }
-
-            return crow::response(200, j_object.dump());
-
-        } catch (const std::exception& e) {
-
-            return crow::response(500, e.what());
-
-        }
-    });
-
-    CROW_ROUTE(app, "/get/users").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
-        auto body = crow::json::load(req.body);
-
-        if (!body ||
-            !body.has("token")
-            ) {
-
-            return crow::response(400, "Error 6");// missing conditions.
-
-        }
-
-        std::string JWT = body["token"].s();
-        if (!Authenticate_JWT_Claims(JWT)) {
-            return crow::response(400, "Error 7");//Something is incorrect in the JWToken.
-        }
-
-        try {
-
-            std::vector<std::string> all_keys;
-            std::size_t cursor = 0;
-            std::size_t count = 100;
-            json result_json;
-
-            do {
-                auto future_reply = client.scan(cursor, count);
-                client.sync_commit();
-                cpp_redis::reply reply = future_reply.get();
-
-                if (!reply.is_array() || reply.as_array().size() != 2) {
-                    std::cerr << "Error 8";//Scan Issue with future_reply.get()
-                    break;
-                }
-
-                const auto& reply_arr = reply.as_array();
-                cursor = std::stoull(reply_arr[0].as_string());
-
-                const auto& keys_array = reply_arr[1].as_array();
-                for (const auto& k : keys_array) {
-                    if (k.is_string()) {
-                        all_keys.push_back(k.as_string());
                     }
-                }
-            } while (cursor != 0);
 
-            for (const auto& key : all_keys) {
-                auto lrange_future = client.lrange(key, 0, -1);
-                client.sync_commit();
-                cpp_redis::reply lrange_reply = lrange_future.get();
-
-                if (!lrange_reply.is_array()) continue;
-
-                json list_items = json::array();
-                for (const auto& item : lrange_reply.as_array()) {
-                    if (item.is_string()) {
-                        list_items.push_back(item.as_string());
+                    if (element.is_string()) {
+                        j_object[key] = element.as_string();
                     }
                     else {
-                        list_items.push_back(nullptr);
+                        j_object[key] = nullptr;
                     }
+
+                    ++index;
                 }
 
-                result_json[key] = list_items;
+                return crow::response(200, j_object.dump());
+
+            } catch (const std::exception& e) {
+
+                return crow::response(500, e.what());
+
+            }
+        });
+
+        CROW_ROUTE(app, "/get/users").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
+            auto body = crow::json::load(req.body);
+
+            if (!body ||
+                !body.has("token")
+                ) {
+
+                return crow::response(400, "Error 6");// missing conditions.
+
             }
 
-            return crow::response(200, result_json.dump(2));
+            std::string JWT = body["token"].s();
+            if (!Authenticate_JWT_Claims(JWT)) {
+                return crow::response(400, "Error 7");//Something is incorrect in the JWToken.
+            }
 
-        } catch (const std::exception& e) {
+            try {
 
-            return crow::response(500, e.what());
+                std::vector<std::string> all_keys;
+                std::size_t cursor = 0;
+                std::size_t count = 100;
+                json result_json;
 
-        }
-    });
+                do {
+                    auto future_reply = client.scan(cursor, count);
+                    client.sync_commit();
+                    cpp_redis::reply reply = future_reply.get();
 
-    app.bindaddr(HOST_IP_ADDRESS).port(std::stoi(HOST_PORT_ADDRESS)).multithreaded().run();
+                    if (!reply.is_array() || reply.as_array().size() != 2) {
+                        std::cerr << "Error 8";//Scan Issue with future_reply.get()
+                        break;
+                    }
+
+                    const auto& reply_arr = reply.as_array();
+                    cursor = std::stoull(reply_arr[0].as_string());
+
+                    const auto& keys_array = reply_arr[1].as_array();
+                    for (const auto& k : keys_array) {
+                        if (k.is_string()) {
+                            all_keys.push_back(k.as_string());
+                        }
+                    }
+                } while (cursor != 0);
+
+                for (const auto& key : all_keys) {
+                    auto lrange_future = client.lrange(key, 0, -1);
+                    client.sync_commit();
+                    cpp_redis::reply lrange_reply = lrange_future.get();
+
+                    if (!lrange_reply.is_array()) continue;
+
+                    json list_items = json::array();
+                    for (const auto& item : lrange_reply.as_array()) {
+                        if (item.is_string()) {
+                            list_items.push_back(item.as_string());
+                        }
+                        else {
+                            list_items.push_back(nullptr);
+                        }
+                    }
+
+                    result_json[key] = list_items;
+                }
+
+                return crow::response(200, result_json.dump(2));
+
+            } catch (const std::exception& e) {
+
+                return crow::response(500, e.what());
+
+            }
+        });
+
+        app.bindaddr(SERVER_NETWORK_HOST_IP).port(std::stoi(SERVER_NETWORK_SOCKET_PORT)).multithreaded().run();
+
+    } catch (const std::exception& ex) {
+        std::cerr << ex.what() << std::endl;
+        return 1;
+    }
 }
