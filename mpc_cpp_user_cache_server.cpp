@@ -26,9 +26,10 @@ int main()
         App::Controllers::Users_Controller::RegisterRoutes(app);
 
         app.bindaddr(SERVER_NETWORK_HOST_IP).port(std::stoi(SERVER_NETWORK_SOCKET_PORT)).multithreaded().run();
+
         return 0;
     } catch (const std::exception& ex) {
         std::cerr << ex.what() << std::endl;
-        return 1;
+        return 0;
     }
 }
