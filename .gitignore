@@ -14,7 +14,6 @@
 /nlohmann/
 /tacopie/
 /x64/
-/app/
 # Visual Studio & MSVC
 .vs/
 *.sln

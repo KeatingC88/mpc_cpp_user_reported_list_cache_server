@@ -31,7 +31,13 @@ include_directories(
 )
 
 # Define the executable
-add_executable(mpc_cpp_user_cache_server mpc_cpp_user_cache_server.cpp)
+add_executable(mpc_cpp_user_cache_server 
+    mpc_cpp_user_cache_server.cpp
+    app/Services/ENV/ENV.cpp
+    app/Services/AES/AES.cpp
+    app/Services/JWT/JWT.cpp
+    app/Controllers/Users_Controller.cpp
+ )
 
 # Link libraries
 target_link_libraries(mpc_cpp_user_cache_server
