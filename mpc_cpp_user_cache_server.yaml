@@ -1,17 +1,17 @@
 version: '3.8'
 
 services:
-  mpc_cpp_user_twitch_cache_server:
+  mpc_cpp_user_cache_server:
     build: .
     image: ${DOCKER_CONTAINER_IMAGE_NAME}
     container_name: ${DOCKER_CONTAINER_NAME}
     ports:
       - "${SERVER_NETWORK_SOCKET_PORT}:${SERVER_NETWORK_SOCKET_PORT}"
     networks:
-      - mpc_cpp_user_twitch_cache_server_link_mpc_redis_user_twitch_cache_database
+      - mpc_cpp_user_cache_server_link_mpc_redis_cache_database
     env_file:
       - .env
 
 networks:
-  mpc_cpp_user_twitch_cache_server_link_mpc_redis_user_twitch_cache_database:
+  mpc_cpp_user_cache_server_link_mpc_redis_cache_database:
     external: true
