@@ -28,4 +28,4 @@ RUN mkdir -p build \
 WORKDIR /app/build
 
 # Run your built server (which now finds .env in CWD)
-CMD ["./mpc_cpp_user_cache_server"]
+CMD ["./mpc_cpp_user_reported_list_cache_server"]

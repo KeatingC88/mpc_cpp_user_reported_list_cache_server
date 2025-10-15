@@ -6,7 +6,7 @@ cmake --build . --config Release
 
 # Docker Option 1) for CLI command:
 1) Navigate CLI to folder and use
-docker compose -f mpc_cpp_user_cache_server.yaml up -d
+docker compose -f mpc_cpp_user_reported_list_cache_server.yaml up -d
 
 # Docker Option 2) startup for CLI command:
 1) Navigate CLI to folder and use

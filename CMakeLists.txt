@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(mpc_cpp_user_cache_server)
+project(mpc_cpp_user_reported_list_cache_server)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,8 +31,8 @@ include_directories(
 )
 
 # Define the executable
-add_executable(mpc_cpp_user_cache_server 
-    mpc_cpp_user_cache_server.cpp
+add_executable(mpc_cpp_user_reported_list_cache_server 
+    mpc_cpp_user_reported_list_cache_server.cpp
     app/Services/ENV/ENV.cpp
     app/Services/AES/AES.cpp
     app/Services/JWT/JWT.cpp
@@ -40,7 +40,7 @@ add_executable(mpc_cpp_user_cache_server
  )
 
 # Link libraries
-target_link_libraries(mpc_cpp_user_cache_server
+target_link_libraries(mpc_cpp_user_reported_list_cache_server
     PRIVATE 
     OpenSSL::Crypto
     cpp_redis

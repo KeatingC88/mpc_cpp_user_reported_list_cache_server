@@ -4,6 +4,7 @@
 #include "../Services/AES/AES.h"
 #include "../Services/JWT/JWT.h"
 #include "../Services/CORS/CORS.h" 
+#include <typeinfo>
 
 #include <cpp_redis/cpp_redis>
 cpp_redis::client client;
@@ -26,27 +27,15 @@ namespace App::Controllers {
             if (status == cpp_redis::client::connect_state::dropped) {
                 std::cerr << "Client disconnected from " << host << ":" << port << std::endl;
             }
-            });
+        });
 
-        CROW_ROUTE(app, "/set/user").methods(crow::HTTPMethod::Post)([JWT, AES](const crow::request& req) {
+        CROW_ROUTE(app, "/set/reported/user/id").methods(crow::HTTPMethod::Post)([JWT, AES](const crow::request& req) {
             auto body = crow::json::load(req.body);
 
             if (!body ||
                 !body.has("id") ||
                 !body.has("token") ||
-                !body.has("online_status") ||
-                !body.has("custom_lbl") ||
-                !body.has("name") ||
-                !body.has("created_on") ||
-                !body.has("avatar_url_path") ||
-                !body.has("avatar_title") ||
-                !body.has("language_code") ||
-                !body.has("region_code") ||
-                !body.has("login_on") ||
-                !body.has("logout_on") ||
-                !body.has("login_type") ||
-                !body.has("account_type") ||
-                !body.has("email_address")
+                !body.has("reported_user_id")
                 ) {
                 return crow::response(400, "Error: 1");//Something is missing from the condition.
             }
@@ -58,115 +47,25 @@ namespace App::Controllers {
             }
 
             try {
-
                 std::string encrypted_user_id = body["id"].s();
                 std::string decrypted_user_id = AES.Decrypt(encrypted_user_id);
+                std::string encrypted_reported_user_id = body["reported_user_id"].s();
+                std::string decrypted_reported_user_id = AES.Decrypt(encrypted_reported_user_id);
 
-                client.ltrim(decrypted_user_id, 1, 0);
-
-                client.rpush(decrypted_user_id, {
-                    encrypted_user_id,
-                    body["online_status"].s(),
-                    body["custom_lbl"].s(),
-                    body["name"].s(),
-                    body["created_on"].s(),
-                    body["avatar_url_path"].s(),
-                    body["avatar_title"].s(),
-                    body["language_code"].s(),
-                    body["region_code"].s(),
-                    body["login_on"].s(),
-                    body["logout_on"].s(),
-                    body["login_type"].s(),
-                    body["account_type"].s(),
-                    body["email_address"].s()
-                    });
-
-                client.commit();
+                client.sadd(decrypted_user_id, { decrypted_reported_user_id });
+                client.sync_commit();
 
                 return crow::response(200, decrypted_user_id);
 
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
 
-                return crow::response(400, "Error: 3");//Try catch failed.
-
-            }
-            });
-
-        CROW_ROUTE(app, "/get/user").methods(crow::HTTPMethod::Post)([JWT, AES](const crow::request& req) {
-            auto body = crow::json::load(req.body);
-
-            if (!body ||
-                !body.has("id") ||
-                !body.has("token")
-                ) {
-                return crow::response(400, "Error 3");//Something is missing from the condition.
-            }
-
-            std::string JWT_Client_Side_Token = body["token"].s();
-            if (!JWT.Authenticate_Claims(JWT_Client_Side_Token)) {
-                return crow::response(400, "Error 4");//Something is incorrect in the JWToken.
-            }
-
-            try {
-
-                std::string encrypted_user_id = body["id"].s();
-                std::string decrypted_user_id = AES.Decrypt(encrypted_user_id);
-
-                auto get_reply_future = client.lrange(decrypted_user_id, 0, -1);
-                client.commit();
-
-                cpp_redis::reply reply = get_reply_future.get();
-
-                if (reply.is_null() || reply.is_array() == false) {
-                    return crow::response(404, "Error 5");//Reply from the database is incorrect.
-                }
-
-                json j_object;
-
-                size_t index = 0;
-
-                for (const auto& element : reply.as_array()) {
-                    std::string key;
-                    switch (index) {
-                    case 0: key = "id"; break;
-                    case 1: key = "online_status"; break;
-                    case 2: key = "custom_lbl"; break;
-                    case 3: key = "name"; break;
-                    case 4: key = "created_on"; break;
-                    case 5: key = "avatar_url_path"; break;
-                    case 6: key = "avatar_title"; break;
-                    case 7: key = "language_code"; break;
-                    case 8: key = "region_code"; break;
-                    case 9: key = "login_on"; break;
-                    case 10: key = "logout_on"; break;
-                    case 11: key = "login_type"; break;
-                    case 12: key = "account_type"; break;
-                    case 13: key = "email_address"; break;
-                    default: key = "unknown_" + std::to_string(index); break;
-                    }
-
-                    if (element.is_string()) {
-                        j_object[key] = element.as_string();
-                    }
-                    else {
-                        j_object[key] = nullptr;
-                    }
-
-                    ++index;
-                }
-
-                return crow::response(200, j_object.dump());
+                return crow::response(400, "Error: 3");//Try failed.
 
             }
-            catch (const std::exception& e) {
 
-                return crow::response(500, e.what());
+        });
 
-            }
-            });
-
-        CROW_ROUTE(app, "/get/users").methods(crow::HTTPMethod::Post)([JWT](const crow::request& req) {
+        CROW_ROUTE(app, "/get/reported/user/ids").methods(crow::HTTPMethod::Post)([JWT,AES](const crow::request& req) {
             auto body = crow::json::load(req.body);
 
             if (!body ||
@@ -233,13 +132,11 @@ namespace App::Controllers {
 
                 return crow::response(200, result_json.dump(2));
 
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
 
                 return crow::response(500, e.what());
 
             }
-            });
+        });
     }
-
 }
