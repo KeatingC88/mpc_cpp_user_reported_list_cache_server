@@ -130,7 +130,7 @@ namespace App::Controllers {
                     result_json[key] = list_items;
                 }
 
-                return crow::response(200, result_json.dump(2));
+                return crow::response(200, AES.Encrypt(result_json.dump(2)));
 
             } catch (const std::exception& e) {
 
